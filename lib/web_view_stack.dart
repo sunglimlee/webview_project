@@ -17,7 +17,7 @@ class _WebViewStackState extends State<WebViewStack> {
   @override
   void initState() {
     super.initState();
-    widget._controller.setNavigationDelegate(
+    widget._controller..setNavigationDelegate(
         NavigationDelegate(
         onPageStarted: (url) {setState(() {
           loadingPercentage = 0;
@@ -40,7 +40,12 @@ class _WebViewStackState extends State<WebViewStack> {
             }
             return NavigationDecision.navigate;
           },
-      ));
+      ))..setJavaScriptMode(JavaScriptMode.unrestricted)
+      // 여기 addJavaScriptChannel 을 이 함수를 가지고 넣어 놓으면 콜백을 실행하면서 동시에 여기 채널을 통해서 있는 객체를 가지고 Dart 에 값을 넘길 수 있게 된다.
+    ..addJavaScriptChannel('SnackBar', onMessageReceived: (message) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message.message),));
+    });
+
   }
 
 
