@@ -6,6 +6,11 @@ enum _MenuOptions {
   navigationDelegate,
   userAgent,
   javascriptChannel,
+  listCookies,
+  clearCookies,
+  addCookie,
+  setCookie,
+  removeCookie,
 }
 
 class Menu extends StatefulWidget {
@@ -17,6 +22,9 @@ class Menu extends StatefulWidget {
 }
 
 class _MenuState extends State<Menu> {
+  final cookieManager = WebViewCookieManager();
+
+
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton(onSelected: (value) async {
@@ -51,7 +59,21 @@ req.onload = function() {
 }
 req.send();''');
           break;
-      }
+        case _MenuOptions.clearCookies:
+          await _onClearCookies();
+          break;
+        case _MenuOptions.listCookies:
+          await _onListCookies(widget.controller);
+          break;
+        case _MenuOptions.addCookie:
+          await _onAddCookie(widget.controller);
+          break;
+        case _MenuOptions.setCookie:
+          await _onSetCookie(widget.controller);
+          break;
+        case _MenuOptions.removeCookie:
+          await _onRemoveCookie(widget.controller);
+          break;      }
     } ,
         itemBuilder: (context) {
       return [
@@ -61,7 +83,80 @@ req.send();''');
           value: _MenuOptions.javascriptChannel,
           child: Text('Lookup IP Address'),
         ),
-      ];
+        const PopupMenuItem<_MenuOptions>(
+          value: _MenuOptions.clearCookies,
+          child: Text('Clear cookies'),
+        ),
+        const PopupMenuItem<_MenuOptions>(
+          value: _MenuOptions.listCookies,
+          child: Text('List cookies'),
+        ),
+        const PopupMenuItem<_MenuOptions>(
+          value: _MenuOptions.addCookie,
+          child: Text('Add cookie'),
+        ),
+        const PopupMenuItem<_MenuOptions>(
+          value: _MenuOptions.setCookie,
+          child: Text('Set cookie'),
+        ),
+        const PopupMenuItem<_MenuOptions>(
+          value: _MenuOptions.removeCookie,
+          child: Text('Remove cookie'),
+        ),      ];
     });
   }
+
+  Future<void> _onListCookies(WebViewController controller) async {
+    final String cookies = await controller
+        .runJavaScriptReturningResult('document.cookie') as String;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:
+    Text(cookies.isNotEmpty ? cookies : 'There are no cookies')));
+  }
+
+  Future<void> _onClearCookies() async {
+    final hadCookies = await cookieManager.clearCookies();
+    String message = 'There were cookies. Now , they are gone!';
+    if (!hadCookies) {
+      message = 'There weere no cookies to clear';
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _onAddCookie(WebViewController controller) async {
+    await controller.runJavaScript('''
+    var date = new Date();
+  date.setTime(date.getTime()+(30*24*60*60*1000));
+  document.cookie = "FirstName=John; expires=" + date.toGMTString();'''
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Custom cookie added')));
+  }
+
+  // add 도 되고 set 도 된다. set 은 cookieManager 로 가능하고
+  Future<void> _onSetCookie(WebViewController controller) async {
+    await cookieManager.setCookie(
+      const WebViewCookie(name: 'foo', value: 'bar', domain: 'flutter.dev'),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Custom cookie is set.'),
+      ),
+    );
+  }
+
+  // You can delete a cookie by updating its expiration time to zero. 0 으로 만들면 지울 수 있다.
+  Future<void> _onRemoveCookie(WebViewController controller) async {
+    await controller.runJavaScript(
+        'document.cookie="FirstName=John; expires=Thu, 01 Jan 1970 00:00:00 UTC" ');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Custom cookie removed.'),
+      ),
+    );
+  }
+
 }
