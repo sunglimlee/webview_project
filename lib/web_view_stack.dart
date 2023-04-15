@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class WebViewStack extends StatefulWidget {
-  const WebViewStack({Key? key}) : super(key: key);
+  final WebViewController _controller;
+  const WebViewStack({Key? key, required WebViewController controller}) : _controller = controller, super(key: key);
 
   @override
   State<WebViewStack> createState() => _WebViewStackState();
@@ -10,14 +11,14 @@ class WebViewStack extends StatefulWidget {
 
 class _WebViewStackState extends State<WebViewStack> {
   var loadingPercentage = 0;
-  late final WebViewController controller;
+  //late final WebViewController controller;
 
 
   @override
   void initState() {
     super.initState();
-    controller = WebViewController()
-      ..setNavigationDelegate(NavigationDelegate(
+    widget._controller.setNavigationDelegate(
+        NavigationDelegate(
         onPageStarted: (url) {setState(() {
           loadingPercentage = 0;
         });},
@@ -31,8 +32,7 @@ class _WebViewStackState extends State<WebViewStack> {
             loadingPercentage = 100;
           });
         }
-      ))..loadRequest(Uri.parse('https://flutter.dev'),
-    );
+      ));
   }
 
 
@@ -40,14 +40,9 @@ class _WebViewStackState extends State<WebViewStack> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        WebViewWidget(controller: controller,),
+        WebViewWidget(controller: widget._controller,),
         if (loadingPercentage < 100)
           LinearProgressIndicator(value: loadingPercentage / 100.0,),
-        // 이 문장만으로도 100 이 되면 더이상 이문장은 실행이 안되는거지.. 거기다. Stack 을 사용하였고..
-/*
-        if (loadingPercentage < 100)
-          Center(child: CircularProgressIndicator(value: loadingPercentage / 100.0,))
-*/
       ],
     );
   }
